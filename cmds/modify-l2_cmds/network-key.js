@@ -19,9 +19,6 @@ exports.handler = async function (argv)
 {
   const rollerClient = rollerApi.createClient(argv);
   const workDir = files.ensureWorkDir(argv.workDir);
-  const privateKey = await eth.getPrivateKey(argv);
-  const account = new Accounts().privateKeyToAccount(privateKey);
-  const signingAddress = account.address;
 
   const wallets = argv.useWalletFiles ? findPoints.getWallets(workDir) : null;
   const points = findPoints.getPoints(argv, workDir, wallets);
@@ -43,22 +40,29 @@ exports.handler = async function (argv)
     //retrieve the network keypair
     let wallet = argv.useWalletFiles ? wallets[patp] : null;
     const currentRevision = currentKeys.life; //network key revision number == life.
-    const revision = currentRevision;
+    argv.point = patp;
+    let revision = currentRevision;
     const keysFileName = `${patp.substring(1)}-networkkeys-${revision}.json`;
-    
     let networkKeyPair = null;
     if(wallet){
       networkKeyPair = wallet.network.keys;
     }
     else if(files.fileExists(workDir, keysFileName)){
+      console.log(`Reading network keys from ${keysFileName}`);
       networkKeyPair = files.readJsonObject(workDir, keysFileName);
     }
     else{
-      console.error(`Could not find network keys for ${patp}: provide them either via wallet or network key file.`);
+      console.error(`Could not find network keys for ${patp} (${keysFileName}): provide them either via wallet or network key file.`);
       process.exit(1);
     }
+    argv.revision = revision;
+    const privateKey = await eth.getPrivateKey(argv);
+    console.log(`Generated private key for ${patp}: ${argv.privateKeyTicket}, ${revision}`);
+    const account = new Accounts().privateKeyToAccount(privateKey);
+    const signingAddress = account.address;
+    console.log(`Signing address: ${signingAddress}`);
 
-    if(!(await rollerApi.getManagementProxyType(rollerClient, patp, signingAddress))){
+    if(!(await rollerApi.canConfigureKeys(rollerClient, patp, signingAddress))){
       console.log(`Cannot set network keys for ${patp}, must be owner or management proxy.`);
       continue;
     }
@@ -67,14 +71,16 @@ exports.handler = async function (argv)
     var publicCrypt = ajsUtils.addHexPrefix(networkKeyPair.crypt.public);
     var publicAuth = ajsUtils.addHexPrefix(networkKeyPair.auth.public);
 
-    if(currentKeys.crypt == publicCrypt && currentKeys.auth == publicAuth)
+    if(currentKeys.crypt == publicCrypt && currentKeys.auth == publicAuth && !argv.breach)
     {
         console.log(`The network key is already set for ${patp}`);
         // console.log(JSON.stringify(networkKeyPair, null, 2));
         // console.log(JSON.stringify(currentKeys, null, 2));
         continue;
     }
-
+    else if(currentKeys.crypt == publicCrypt && currentKeys.auth == publicAuth && argv.breach){
+        console.log(`Breaching with existing key revision ${patp}.`);
+    }
     var receipt = await rollerApi.configureKeys(rollerClient, patp, publicCrypt, publicAuth, argv.breach, signingAddress, privateKey);
     console.log("Tx hash: "+receipt.hash);
 

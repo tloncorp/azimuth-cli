@@ -2,6 +2,7 @@ const ob = require('urbit-ob')
 const kg = require('urbit-key-generation');
 const ticket = require('up8-ticket');
 const _ = require('lodash')
+const details = require('../get_cmds/details')
 const {files, validate, findPoints} = require('../../utils')
 
 // needs to be required explicitly for up8-ticket to work
@@ -24,9 +25,14 @@ exports.builder = (yargs) =>{
     conflicts: ['points-file', 'use-wallet-files']
   });
   yargs.option('use-wallet-files',{
-    describe: `Use the wallet JSON files in the current work directory for the points and the network keys, will only generetate the network key file. The wallet will have to have been generated with the --generate-network-keys set to true (default).`,
+    describe: `Use the wallet JSON files in the current work directory for the points and the network keys, will only generate the network key file. The wallet will have to have been generated with the --generate-network-keys set to true (default).`,
     type: 'boolean',
     conflicts: ['points-file', 'points']
+  });
+  yargs.option('breach',{
+    describe: 'Generate keys for the next key revision.',
+    default: false,
+    type: 'boolean',
   });
   yargs.check(argv => {
     if (!argv.pointsFile && !argv.points && !argv.useWalletFiles) throw new Error('You must provide either --points-file, --points, or --use-wallet-files')
@@ -44,9 +50,17 @@ exports.handler = async function (argv)
   console.log(`Will generate network keys for ${points.length} points.`);
   for (const p of points) {
     const patp = ob.patp(p);
+    const decPoint = ob.patp2dec(patp);
+    argv.returnDetails = true;
+
+    const pinfo = await details.getPointInfo(p, argv);
+    if (pinfo === null) {
+      console.log(`Could not get details for ${patp}, will skip.`);
+      continue;
+    }
 
     let networkKeyPair = null;
-    let revision = DEFAULT_REVISION; //TODO: support bumping the revision (by looking it up on-chain)
+    let revision = pinfo.networkKeysRevision;
 
     //see if we have a wallet to get the network keys from
     let wallet = argv.useWalletFiles ? wallets[patp] : null;
@@ -64,15 +78,19 @@ exports.handler = async function (argv)
       if(!files.fileExists(workDir, keysFileName))
       {
         // use the wallet utils to generate the keypair. We wont keep the wallet, but only they network keys
-        const tmpMasterTicket = await ticket.gen_ticket_more(128);
+        // const bitSize = argv.bitSize ?? getBitSize(p);
+        // const tmpMasterTicket = await ticket.gen_ticket_more(bitSize);
+        let useRev = revision;
         const tmpWallet = await kg.generateWallet({
-          ticket: tmpMasterTicket,
+          ticket: argv.privateKeyTicket,
           ship: p,
           boot: true,
-          revision: revision
+          revision: useRev
         });
+        console.log(`Generated network keys for ${patp}: ${argv.privateKeyTicket}, ${revision}`);
         networkKeyPair = tmpWallet.network.keys;
         const file = files.writeFile(workDir, keysFileName, networkKeyPair);
+        pk = tmpWallet.ownership.keys.private;
         console.log(`Wrote network keys to: ${file}`);
       }
       else
@@ -86,7 +104,7 @@ exports.handler = async function (argv)
     var networkKeyfileName = `${patp.substring(1)}-${revision}.key`;
     if(!files.fileExists(workDir, networkKeyfileName))
     {
-      var networkKeyfileContents = kg.generateKeyfile(networkKeyPair, p, DEFAULT_REVISION);
+      var networkKeyfileContents = kg.generateKeyfile(networkKeyPair, p, Number(revision));
       const file = files.writeFile(workDir, networkKeyfileName, networkKeyfileContents);
       console.log(`Wrote network keyfile to: ${file}`);
     }
@@ -95,6 +113,4 @@ exports.handler = async function (argv)
       console.log(`${networkKeyfileName} already exists, will not recreate.`);
     }
   }
-}
-
-const DEFAULT_REVISION = 0;
+} 
