@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+
+set -u
+set -e
+
+ROOT=$(git rev-parse --show-toplevel)
+
+if [ "${PWD}" != "${ROOT}" ]
+then
+    echo "Please run from top-level, ${ROOT}"
+    exit 2
+fi
+
+#
+# Login into the container registry:
+
+podman login ${GAR_LOCATION}-docker.pkg.dev -u _json_key -p "${GHA_SA_KEY}"
+
+
+IMAGE="azimuth-cli"
+
+#
+# Make the Docker image:
+#
+
+podman push \
+    localhost/tloncorp/${IMAGE}:latest \
+    ${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/images/${IMAGE}:$(cat .commit)
+    
+podman push \
+    localhost/tloncorp/${IMAGE}:latest \
+    ${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/images/${IMAGE}:latest

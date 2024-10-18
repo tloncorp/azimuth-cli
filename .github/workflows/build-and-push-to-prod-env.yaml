@@ -1,0 +1,36 @@
+name: Prod Build of azimuth-cli
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build_prod_images:
+    environment: prod
+    env:
+      GAR_LOCATION: us-central1
+      PROJECT_ID: prod-f0181862
+      GHA_SA_KEY: ${{ secrets.GKE_SA_KEY }} # using the github actions service account key in prod project
+
+    name: Build and Push Images for Test Env
+    runs-on:
+      - self-hosted
+      - Linux
+      - X64
+      - Hosting
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v3
+        with:
+          clean: false
+
+      - name: Record timestamp
+        run: |
+          bin/build-package-start
+
+      - name: Build the azimuth-cli image
+        run: |
+          bin/build-docker azimuth-cli
+
+      - name: Push to GCP Artifact Registry
+        run: |
+          bin/build-docker-push azimuth-cli

@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+
+
+set -u
+set -e
+
+ROOT=$(git rev-parse --show-toplevel)
+
+if [ "${PWD}" != "${ROOT}" ]
+then
+    echo "Please run from top-level, ${ROOT}"
+    exit 2
+fi
+
+WORKDIR=${ROOT}
+
+#
+# Record the current commit hash for placement in containers and for later use
+# in forming production image names:
+#
+
+git rev-parse --short HEAD > .commit
+
+
+IMAGE="azimuth-cli"
+
+
+#
+# Make the Docker image:
+#
+
+    podman build \
+        --tag=localhost/tloncorp/${IMAGE}:latest \
+        -f ${WORKDIR}/Dockerfile \
+        .
