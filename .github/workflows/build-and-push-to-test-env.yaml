@@ -13,10 +13,7 @@ jobs:
 
     name: Build and Push Images for Test Env
     runs-on:
-      - self-hosted
-      - Linux
-      - X64
-      - Hosting
+      - ubuntu-24.04
     steps:
       - name: Checkout branch
         uses: actions/checkout@v3
