@@ -3,6 +3,10 @@ name: Staging Build of azimuth-cli
 on:
   workflow_dispatch:
 
+  push:
+    branches:
+      - solaris
+
 jobs:
   build_test_images:
     environment: test

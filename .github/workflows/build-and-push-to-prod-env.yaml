@@ -3,6 +3,10 @@ name: Prod Build of azimuth-cli
 on:
   workflow_dispatch:
 
+  push:
+    branches:
+      - solaris
+
 jobs:
   build_prod_images:
     environment: prod
