@@ -1,6 +1,7 @@
 name: Trigger internal azimuth-cli prod build
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - solaris
