@@ -1,18 +1,19 @@
-name: Trigger internal azimuth-cli prod build
+name: Trigger internal azimuth-cli test build
 
 on:
   workflow_dispatch:
 
 jobs:
   trigger-test:
+    environment: test
     runs-on: ubuntu-latest
     steps:
-      - name: Send repository dispatch to ylem (test)
-        uses: actions/github-script@v6
+      - name: Internal test build
+        uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.GH_TOKEN }}
           script: |
-            const { GITHUB_TOKEN } = process.env;
-            await github.repos.createDispatchEvent({
+            await github.rest.repos.createDispatchEvent({
               owner: 'tloncorp',
               repo: 'ylem',
               event_type: 'test-breach-ship-docker',

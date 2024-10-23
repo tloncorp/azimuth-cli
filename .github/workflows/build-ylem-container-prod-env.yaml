@@ -7,15 +7,16 @@ on:
       - solaris
 
 jobs:
-  trigger-prod:
+  trigger-test:
+    environment: prod
     runs-on: ubuntu-latest
     steps:
-      - name: Send repository dispatch to ylem (prod)
-        uses: actions/github-script@v6
+      - name: Internal prod build
+        uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.GH_TOKEN }}
           script: |
-            const { GITHUB_TOKEN } = process.env;
-            await github.repos.createDispatchEvent({
+            await github.rest.repos.createDispatchEvent({
               owner: 'tloncorp',
               repo: 'ylem',
               event_type: 'prod-breach-ship-docker',
