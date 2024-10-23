@@ -8,8 +8,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Internal test build
-        uses: peter-evans/repository-dispatch@v3
+        uses: actions/github-script@v7
         with:
-          token: ${{ secrets.GH_TOKEN }}
-          repository: tloncorp/ylem
-          event-type: test-breach-docker-ship
+          github-token: ${{secrets.GH_TOKEN}}
+          script: |
+            await github.rest.repos.createDispatchEvent({
+              owner: 'tloncorp',
+              repo: 'ylem',
+              event_type: 'test-breach-ship-docker',
+              client_payload: { branch: 'main' }
+            });
