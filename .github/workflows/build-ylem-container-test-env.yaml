@@ -4,8 +4,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  environment: test
   trigger-test:
+    environment: test
     runs-on: ubuntu-latest
     steps:
       - name: Internal test build
