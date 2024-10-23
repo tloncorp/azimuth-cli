@@ -1,4 +1,4 @@
-name: Trigger internal azimuth-cli test build
+name: Trigger internal azimuth-cli prod build
 
 on:
   workflow_dispatch:
