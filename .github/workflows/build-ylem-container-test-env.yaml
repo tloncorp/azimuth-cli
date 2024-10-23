@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
 
 jobs:
+  environment: test
   trigger-test:
     runs-on: ubuntu-latest
     steps:
